@@ -1,0 +1,23 @@
+mfilemon — Multi File Port Monitor (open-source redirection port monitor)
+========================================================================
+
+PLACEHOLDER — binaries are NOT committed. Add them before building the installer.
+
+What to add here:
+  third_party/mfilemon/x64/mfilemon.dll   (64-bit Windows)
+  third_party/mfilemon/x86/mfilemon.dll   (32-bit Windows)
+
+Source project:
+  mfilemon by Lorenzo Monti (LGPL). Original SourceForge project:
+  https://sourceforge.net/projects/mfilemon/
+  (Use a trusted build, or compile from source. Record the exact version + URL below.)
+
+Version used : <FILL IN>
+Download URL : <FILL IN>
+SHA-256 x64  : <FILL IN>
+SHA-256 x86  : <FILL IN>
+
+Signing:
+  Because we run under self-signed / test-signing mode (per project decision),
+  sign mfilemon.dll with the cert produced by installer/make-test-cert.ps1:
+    signtool sign /f installer\certs\PrintBridge.pfx /p <pw> /fd SHA256 mfilemon.dll

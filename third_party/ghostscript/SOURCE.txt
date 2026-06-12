@@ -1,0 +1,26 @@
+Ghostscript — PostScript/PDF interpreter (used on the SHARING PC to print jobs)
+==============================================================================
+
+PLACEHOLDER — binaries are NOT committed. Add them before building the installer.
+
+What to add here (minimal redistributable subset is fine):
+  third_party/ghostscript/bin/gswin64c.exe   (64-bit console binary — used by the app)
+  third_party/ghostscript/bin/gswin32c.exe   (32-bit console binary — optional)
+  third_party/ghostscript/bin/gsdll64.dll
+  third_party/ghostscript/lib/*              (Ghostscript library files)
+
+The app resolves: {InstallDir}\ghostscript\bin\gswin64c.exe
+
+Source / license:
+  Ghostscript is dual-licensed (AGPL or commercial). For private use on your own
+  LAN the AGPL build is fine. If you ever distribute/sell PrintBridge, review the
+  AGPL obligations or obtain a commercial Ghostscript license (Artifex).
+  https://www.ghostscript.com/
+
+Version used : <FILL IN>
+Download URL : <FILL IN>
+License      : AGPL | Commercial  (circle one)
+SHA-256      : <FILL IN>
+
+Sanity check after adding:
+  third_party\ghostscript\bin\gswin64c.exe -h     (should print Ghostscript help)
