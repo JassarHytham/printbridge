@@ -38,7 +38,6 @@ namespace PrintBridge.App
                             Encoding.UTF8.GetString(FrameCodec.ReadFrame(stream)));
                     }
                     catch (IOException) { return JobResult.Error("connection lost during print"); }
-                    catch (EndOfStreamException) { return JobResult.Error("connection lost during print"); }
                 }
             }
         }
