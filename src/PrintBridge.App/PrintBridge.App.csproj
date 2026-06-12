@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>PrintBridge.App</RootNamespace>
+    <AssemblyName>PrintBridge.App</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PrintBridge.Protocol\PrintBridge.Protocol.csproj" />
+    <ProjectReference Include="..\PrintBridge.Spooler\PrintBridge.Spooler.csproj" />
+  </ItemGroup>
+
+</Project>
