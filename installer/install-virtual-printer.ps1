@@ -63,17 +63,19 @@ try {
 
 # --- Find an in-box PostScript driver ------------------------------------------
 $psDriverCandidates = @(
-    "Microsoft PS Class Driver",       # Windows 10 / 11 (x64 and ARM64)
+    "Microsoft PS Class Driver",       # Windows 10 / 11 (x64, ARM64, x86)
     "MS Publisher Imagesetter",         # Windows 7 / 8 in-box PS driver
     "HP Color LaserJet 2800 Series PS"  # widely distributed PS driver
 )
 
 $driverName = $null
 foreach ($cand in $psDriverCandidates) {
+    # Already installed?
     if (Get-PrinterDriver -Name $cand -ErrorAction SilentlyContinue) {
         $driverName = $cand
         break
     }
+    # Try to install from the Windows built-in driver store (works on x64 + ARM64).
     try {
         Add-PrinterDriver -Name $cand -ErrorAction Stop
         $driverName = $cand
