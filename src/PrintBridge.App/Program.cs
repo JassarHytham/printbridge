@@ -13,15 +13,7 @@ namespace PrintBridge.App
         [STAThread]
         private static void Main(string[] args)
         {
-            // Per-job capture process spawned by the port monitor: read stdin, pipe, exit.
-            if (args.Length > 0 && args[0] == "--capture")
-            {
-                try { CaptureMode.Run(args); }
-                catch { /* a lost job must not pop UI from a spooler child */ }
-                return;
-            }
-
-            // Only one GUI instance (it owns the capture named pipe + listeners).
+            // Only one GUI instance may run (it owns port 9100 and port 49153).
             _singleInstance = new Mutex(true, "PrintBridge.SingleInstance", out var isNew);
             if (!isNew)
             {
@@ -37,30 +29,30 @@ namespace PrintBridge.App
             Directory.CreateDirectory(Path.GetDirectoryName(configPath));
             var config = AppConfig.Load(configPath);
 
-            // Ghostscript path resolved relative to the install dir (Phase 5 bundles it).
+            // Ghostscript resolved relative to install dir (bundled in third_party\ghostscript).
             var gsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
                 "ghostscript", "bin", "gswin64c.exe");
             IPrinterService printers = File.Exists(gsPath)
                 ? (IPrinterService)new GhostscriptPrinter(gsPath)
-                : new EnumOnlyPrinterService(); // graceful pre-bundle fallback
+                : new EnumOnlyPrinterService();   // graceful pre-bundle fallback
 
-            var pcId = MachineIdentity.GetOrCreatePcId();
+            var pcId   = MachineIdentity.GetOrCreatePcId();
             var pcName = Environment.MachineName;
 
-            var sharing = new SharingService(printers, () => config,
-                () => config.SharedPrinters, pcId, pcName);
-            var discovery = new DiscoveryService();
-            var capture = new CaptureServer(() => config, discovery);
+            var sharing     = new SharingService(printers, () => config,
+                                  () => config.SharedPrinters, pcId, pcName);
+            var discovery   = new DiscoveryService();
+            var rawListener = new LocalRawListener(() => config, discovery);
 
             sharing.Start();
             discovery.Start();
-            capture.Start();
+            rawListener.Start();
 
             using (sharing)
             using (discovery)
-            using (capture)
+            using (rawListener)
             {
-                Application.Run(new MainForm(printers, discovery, sharing, capture, config, configPath));
+                Application.Run(new MainForm(printers, discovery, sharing, rawListener, config, configPath));
             }
         }
     }

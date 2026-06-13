@@ -8,14 +8,9 @@
 packages/
 *.nupkg
 
-# Private signing key — NEVER commit
-installer/certs/*.pfx
-
 # Bundled third-party binaries (added locally per SOURCE.txt; large/licensed)
 third_party/ghostscript/bin/
 third_party/ghostscript/lib/
-third_party/mfilemon/x64/
-third_party/mfilemon/x86/
 
 # Installer output
 installer/Output/

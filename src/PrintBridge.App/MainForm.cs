@@ -11,7 +11,7 @@ namespace PrintBridge.App
         private readonly IPrinterService _printers;
         private readonly DiscoveryService _discovery;
         private readonly SharingService _sharing;
-        private readonly CaptureServer _capture;
+        private readonly LocalRawListener _rawListener;
         private readonly AppConfig _config;
         private readonly string _configPath;
 
@@ -22,13 +22,13 @@ namespace PrintBridge.App
         private Timer _refreshTimer;
 
         public MainForm(IPrinterService printers, DiscoveryService discovery,
-            SharingService sharing, CaptureServer capture, AppConfig config, string configPath)
+            SharingService sharing, LocalRawListener rawListener, AppConfig config, string configPath)
         {
             _printers = printers; _discovery = discovery; _sharing = sharing;
-            _capture = capture; _config = config; _configPath = configPath;
+            _rawListener = rawListener; _config = config; _configPath = configPath;
             BuildUi();
             _sharing.JobLogged += AppendLog;
-            if (_capture != null) _capture.JobLogged += AppendLog;
+            if (_rawListener != null) _rawListener.JobLogged += AppendLog;
         }
 
         private void AppendLog(string line)
