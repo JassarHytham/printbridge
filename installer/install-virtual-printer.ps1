@@ -85,7 +85,7 @@ if (-not $driverName) {
     Write-Warning "No PostScript driver found automatically."
     Write-Warning "To get one: add any PostScript printer in Windows once, then remove it (the driver stays)."
     Write-Warning "Then re-run this script. List drivers with: Get-PrinterDriver | Select Name"
-    throw "PostScript driver not found — see warnings above."
+    throw "PostScript driver not found - see warnings above."
 }
 
 Write-Host "Using driver: $driverName"
