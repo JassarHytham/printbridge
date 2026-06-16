@@ -29,6 +29,13 @@ namespace PrintBridge.App
 
         public event Action<string> JobLogged;
 
+        /// <summary>
+        /// When set, called once per job to decide the target + settings (the GUI shows
+        /// a picker on the UI thread). Returns null if the user cancelled. When unset,
+        /// the job falls back to the remembered default in config.
+        /// </summary>
+        public Func<JobRouting> ResolveRouting { get; set; }
+
         public LocalRawListener(Func<AppConfig> getConfig, DiscoveryService discovery)
         {
             _getConfig = getConfig;
@@ -81,14 +88,39 @@ namespace PrintBridge.App
         private void ForwardJob(byte[] postScript)
         {
             var cfg = _getConfig();
-            if (string.IsNullOrEmpty(cfg.ActiveRemotePrinter))
+
+            ServerEntry server;
+            string targetPrinter;
+            int copies = 1;
+            PrintFormat format = null;
+
+            if (ResolveRouting != null)
             {
-                JobLogged?.Invoke("No remote printer selected — job dropped.");
-                return;
+                // GUI present: ask the user (or auto-resolve the default) on the UI thread.
+                var routing = ResolveRouting();
+                if (routing == null)
+                {
+                    JobLogged?.Invoke("Print cancelled.");
+                    return;
+                }
+                server        = routing.Server;
+                targetPrinter = routing.PrinterName;
+                copies        = Math.Max(1, routing.Copies);
+                format        = routing.Format;
+            }
+            else
+            {
+                // Headless fallback: use the remembered default target.
+                if (string.IsNullOrEmpty(cfg.ActiveRemotePrinter))
+                {
+                    JobLogged?.Invoke("No remote printer selected — job dropped.");
+                    return;
+                }
+                server = _discovery.Registry.GetActive(DateTime.UtcNow)
+                    .FirstOrDefault(s => s.PcId == cfg.ActiveRemotePcId);
+                targetPrinter = cfg.ActiveRemotePrinter;
             }
 
-            var server = _discovery.Registry.GetActive(DateTime.UtcNow)
-                .FirstOrDefault(s => s.PcId == cfg.ActiveRemotePcId);
             if (server == null)
             {
                 JobLogged?.Invoke("Selected server is offline — job dropped.");
@@ -97,13 +129,16 @@ namespace PrintBridge.App
 
             var header = new JobHeader
             {
-                JobId        = Guid.NewGuid().ToString("N"),
-                TargetPrinter = cfg.ActiveRemotePrinter,
-                Copies       = 1,
-                PaperSize    = "A4",
+                JobId          = Guid.NewGuid().ToString("N"),
+                TargetPrinter  = targetPrinter,
+                Copies         = copies,
+                PaperSize      = format?.Name ?? "Printer default",
+                MediaWidthPoints  = format?.WidthPoints ?? 0,
+                MediaHeightPoints = format?.HeightPoints ?? 0,
+                FitToPage      = format?.FitToPage ?? false,
                 RequestingUser = Environment.UserName,
                 RequestingPc   = Environment.MachineName,
-                Pin          = cfg.Pin
+                Pin            = cfg.Pin
             };
 
             JobLogged?.Invoke($"Sending job to {server.PcName} -> {header.TargetPrinter}...");

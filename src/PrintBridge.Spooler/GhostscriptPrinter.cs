@@ -24,12 +24,14 @@ namespace PrintBridge.Spooler
 
         public IReadOnlyList<string> ListLocalPrinters() => _enumerator.ListLocalPrinters();
 
-        public void PrintPostScript(string printerName, string postScriptPath, int copies)
+        public void PrintPostScript(string printerName, string postScriptPath, int copies,
+            double mediaWidthPoints, double mediaHeightPoints, bool fitToPage)
         {
             if (!File.Exists(postScriptPath))
                 throw new FileNotFoundException("PostScript file missing.", postScriptPath);
 
-            var args = GhostscriptCommand.BuildArguments(printerName, postScriptPath, copies);
+            var args = GhostscriptCommand.BuildArguments(printerName, postScriptPath, copies,
+                mediaWidthPoints, mediaHeightPoints, fitToPage);
             var psi = new ProcessStartInfo
             {
                 FileName = _ghostscriptExePath,

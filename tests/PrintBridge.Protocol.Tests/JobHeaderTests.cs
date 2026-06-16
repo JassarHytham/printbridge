@@ -11,7 +11,10 @@ public class JobHeaderTests
             JobId = "job-123",
             TargetPrinter = "HP LaserJet",
             Copies = 2,
-            PaperSize = "A4",
+            PaperSize = "Receipt 80mm",
+            MediaWidthPoints = 226.77,
+            MediaHeightPoints = 841.89,
+            FitToPage = true,
             RequestingUser = "jassar",
             RequestingPc = "LAPTOP-1",
             Pin = "4242"
@@ -22,7 +25,10 @@ public class JobHeaderTests
         Assert.Equal("job-123", back.JobId);
         Assert.Equal("HP LaserJet", back.TargetPrinter);
         Assert.Equal(2, back.Copies);
-        Assert.Equal("A4", back.PaperSize);
+        Assert.Equal("Receipt 80mm", back.PaperSize);
+        Assert.Equal(226.77, back.MediaWidthPoints);
+        Assert.Equal(841.89, back.MediaHeightPoints);
+        Assert.True(back.FitToPage);
         Assert.Equal("jassar", back.RequestingUser);
         Assert.Equal("LAPTOP-1", back.RequestingPc);
         Assert.Equal("4242", back.Pin);

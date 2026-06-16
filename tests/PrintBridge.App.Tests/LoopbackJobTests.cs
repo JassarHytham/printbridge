@@ -12,7 +12,8 @@ public class LoopbackJobTests
     {
         public readonly List<string> Printed = new List<string>();
         public IReadOnlyList<string> ListLocalPrinters() => new[] { "FAKE" };
-        public void PrintPostScript(string printer, string path, int copies) => Printed.Add(printer);
+        public void PrintPostScript(string printer, string path, int copies,
+            double mediaWidthPoints, double mediaHeightPoints, bool fitToPage) => Printed.Add(printer);
     }
 
     [Fact]

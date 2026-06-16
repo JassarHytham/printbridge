@@ -117,7 +117,8 @@ namespace PrintBridge.App
 
                     tempPs = Path.Combine(Path.GetTempPath(), $"pb_{header.JobId}.ps");
                     File.WriteAllBytes(tempPs, payload);
-                    _printers.PrintPostScript(header.TargetPrinter, tempPs, Math.Max(1, header.Copies));
+                    _printers.PrintPostScript(header.TargetPrinter, tempPs, Math.Max(1, header.Copies),
+                        header.MediaWidthPoints, header.MediaHeightPoints, header.FitToPage);
 
                     WriteResult(stream, JobResult.Printed());
                     JobLogged?.Invoke(

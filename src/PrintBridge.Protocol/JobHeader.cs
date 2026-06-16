@@ -17,6 +17,18 @@ namespace PrintBridge.Protocol
         [JsonProperty("paperSize")]
         public string PaperSize { get; set; }
 
+        /// <summary>Forced media width in PostScript points (0 = printer default).</summary>
+        [JsonProperty("mediaWidthPoints")]
+        public double MediaWidthPoints { get; set; }
+
+        /// <summary>Forced media height in PostScript points (0 = printer default).</summary>
+        [JsonProperty("mediaHeightPoints")]
+        public double MediaHeightPoints { get; set; }
+
+        /// <summary>Scale the document to fit the forced media.</summary>
+        [JsonProperty("fitToPage")]
+        public bool FitToPage { get; set; }
+
         [JsonProperty("requestingUser")]
         public string RequestingUser { get; set; }
 
