@@ -1,4 +1,4 @@
-; PrintBridge installer (Inno Setup 6).
+﻿; PrintBridge installer (Inno Setup 6).
 ; Build with:  iscc installer\PrintBridge.iss
 ; Expects the app built (Release) to:  src\PrintBridge.App\bin\Release\net48\
 ; and Ghostscript present under third_party\ghostscript\ (see SOURCE.txt).
@@ -30,7 +30,7 @@ PrivilegesRequired=admin
 Source: "..\src\PrintBridge.App\bin\Release\net48\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 ; Ghostscript x64 (user-mode; works on x64 and ARM64 via emulation).
 Source: "..\third_party\ghostscript\*"; DestDir: "{app}\ghostscript"; Flags: recursesubdirs ignoreversion
-; Installer scripts (no cert needed — Standard TCP/IP port requires no signing).
+; Installer scripts (no cert needed â€” Standard TCP/IP port requires no signing).
 Source: "install-virtual-printer.ps1";   DestDir: "{app}\installer"; Flags: ignoreversion
 Source: "uninstall-virtual-printer.ps1"; DestDir: "{app}\installer"; Flags: ignoreversion
 
@@ -42,11 +42,11 @@ Name: "{userstartup}\PrintBridge"; Filename: "{app}\{#AppExe}"; Tasks: startup
 Name: "startup"; Description: "Start PrintBridge automatically when I sign in"; GroupDescription: "Startup"
 
 [Run]
-; Create the virtual printer (Standard TCP/IP RAW port — no reboot needed).
+; Create the virtual printer (Standard TCP/IP RAW port â€” no reboot needed).
 Filename: "powershell.exe"; \
   Parameters: "-ExecutionPolicy Bypass -File ""{app}\installer\install-virtual-printer.ps1"" -InstallRoot ""{app}"""; \
   StatusMsg: "Setting up the shared virtual printer..."; \
-  Flags: runhidden waituntilterminated
+  Flags: waituntilterminated
 ; Launch the app after install.
 Filename: "{app}\{#AppExe}"; Description: "Launch PrintBridge"; Flags: nowait postinstall skipifsilent
 

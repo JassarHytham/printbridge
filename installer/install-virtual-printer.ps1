@@ -1,100 +1,75 @@
-<#
+﻿<#
 .SYNOPSIS
-  Installs the "Shared Printer (PrintBridge)" virtual printer on this PC.
-  Uses a Standard TCP/IP RAW port pointing to 127.0.0.1:9100 — no custom
-  DLLs, no driver signing, no test-signing mode. Works on x64 and ARM64.
-
-.DESCRIPTION
-  Must run elevated (Administrator). Designed to be invoked by the app on
-  first "Use selected printer", or by the Inno Setup installer.
+  Installs the "Shared Printer (PrintBridge)" virtual printer.
+  Log: C:\ProgramData\PrintBridge\install-printer.log
 #>
-
-param(
-    [string]$InstallRoot = (Split-Path $PSScriptRoot -Parent)
-)
-
+param([string]$InstallRoot = (Split-Path $PSScriptRoot -Parent))
 $ErrorActionPreference = "Stop"
 
-function Assert-Admin {
-    $id = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $p  = New-Object Security.Principal.WindowsPrincipal($id)
-    if (-not $p.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)) {
-        throw "This script must be run as Administrator."
-    }
-}
+$logDir  = "C:\ProgramData\PrintBridge"
+$logFile = "$logDir\install-printer.log"
+if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Force $logDir | Out-Null }
+function Log { param([string]$m)
+    $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m"
+    Write-Host $line; Add-Content $logFile $line -Encoding UTF8 }
 
-Assert-Admin
+Log "=== PrintBridge printer install started ==="
+Log "OS: $([Environment]::OSVersion.VersionString)  Arch: $env:PROCESSOR_ARCHITECTURE"
+
+$id = [Security.Principal.WindowsIdentity]::GetCurrent()
+if (-not (New-Object Security.Principal.WindowsPrincipal($id)).IsInRole(
+        [Security.Principal.WindowsBuiltinRole]::Administrator)) {
+    Log "ERROR: not running as Administrator."; throw "Must run as Administrator." }
 
 $printerName = "Shared Printer (PrintBridge)"
 $portName    = "PrintBridge_RAW"
 $portAddress = "127.0.0.1"
 $portNumber  = 9100
 
-Write-Host "Setting up '$printerName'..."
-
-# --- Remove existing printer/port if present (idempotent re-run) ---------------
 if (Get-Printer -Name $printerName -ErrorAction SilentlyContinue) {
-    Write-Host "Removing existing printer..."
-    Remove-Printer -Name $printerName -ErrorAction SilentlyContinue
-}
+    Log "Removing existing printer..."; Remove-Printer -Name $printerName -ErrorAction SilentlyContinue }
 if (Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue) {
-    Write-Host "Removing existing port..."
-    Remove-PrinterPort -Name $portName -ErrorAction SilentlyContinue
-}
+    Log "Removing existing port..."; Remove-PrinterPort -Name $portName -ErrorAction SilentlyContinue }
 
-# --- Create a Standard TCP/IP RAW port to 127.0.0.1:9100 ----------------------
-# Uses Windows' built-in TCPMON.DLL — no extra DLLs required.
-Write-Host "Creating RAW port '$portName' -> $portAddress`:$portNumber ..."
-
+Log "Creating RAW port $portName -> ${portAddress}:$portNumber ..."
 try {
-    # Modern cmdlet: Windows 8+ / Server 2012+
     Add-PrinterPort -Name $portName -PrinterHostAddress $portAddress -PortNumber $portNumber
+    Log "Port created via Add-PrinterPort."
 } catch {
-    # WMI fallback for Windows 7
-    Write-Host "Add-PrinterPort failed ($($_.Exception.Message)), trying WMI fallback..."
-    $wmiPort = ([wmiclass]"Win32_TCPIPPrinterPort").CreateInstance()
-    $wmiPort.Name        = $portName
-    $wmiPort.HostAddress = $portAddress
-    $wmiPort.PortNumber  = $portNumber
-    $wmiPort.Protocol    = 1   # 1 = RAW
-    $wmiPort.Queue       = "RAW"
-    $wmiPort.Put() | Out-Null
+    Log "Add-PrinterPort failed: $($_.Exception.Message) — WMI fallback..."
+    $w = ([wmiclass]"Win32_TCPIPPrinterPort").CreateInstance()
+    $w.Name=$portName; $w.HostAddress=$portAddress; $w.PortNumber=$portNumber
+    $w.Protocol=1; $w.Queue="RAW"; $w.Put() | Out-Null
+    Log "Port created via WMI."
 }
 
-# --- Find an in-box PostScript driver ------------------------------------------
-$psDriverCandidates = @(
-    "Microsoft PS Class Driver",       # Windows 10 / 11 (x64, ARM64, x86)
-    "MS Publisher Imagesetter",         # Windows 7 / 8 in-box PS driver
-    "HP Color LaserJet 2800 Series PS"  # widely distributed PS driver
-)
+function TryAddDriver([string]$name) {
+    if (Get-PrinterDriver -Name $name -ErrorAction SilentlyContinue) { return $true }
+    try { Add-PrinterDriver -Name $name -ErrorAction Stop; return $true } catch { return $false }
+}
 
 $driverName = $null
-foreach ($cand in $psDriverCandidates) {
-    # Already installed?
-    if (Get-PrinterDriver -Name $cand -ErrorAction SilentlyContinue) {
-        $driverName = $cand
-        break
-    }
-    # Try to install from the Windows built-in driver store (works on x64 + ARM64).
-    try {
-        Add-PrinterDriver -Name $cand -ErrorAction Stop
-        $driverName = $cand
-        break
-    } catch { }
+foreach ($cand in @("Microsoft PS Class Driver","MS Publisher Imagesetter",
+                    "HP Color LaserJet 2800 Series PS","Generic / Text Only")) {
+    Log "Trying driver: $cand"
+    if (TryAddDriver $cand) { $driverName = $cand; Log "Driver ready: $driverName"; break }
 }
 
 if (-not $driverName) {
-    Write-Warning "No PostScript driver found automatically."
-    Write-Warning "To get one: add any PostScript printer in Windows once, then remove it (the driver stays)."
-    Write-Warning "Then re-run this script. List drivers with: Get-PrinterDriver | Select Name"
-    throw "PostScript driver not found - see warnings above."
+    Log "Quick pass failed — staging ntprint.inf via pnputil..."
+    $inf = "$env:SystemRoot\inf\ntprint.inf"
+    if (Test-Path $inf) {
+        $r = & pnputil.exe /add-driver $inf /install 2>&1; Log "pnputil: $r"
+        if (TryAddDriver "Microsoft PS Class Driver") { $driverName = "Microsoft PS Class Driver" }
+    } else { Log "ntprint.inf not found at $inf" }
 }
 
-Write-Host "Using driver: $driverName"
+if (-not $driverName) {
+    Log "ERROR: No driver could be installed. Drivers on this machine:"
+    Get-PrinterDriver | ForEach-Object { Log "  $($_.Name)" }
+    throw "PostScript driver not found. See $logFile"
+}
 
-# --- Create the virtual printer ------------------------------------------------
+Log "Creating printer '$printerName' with driver '$driverName'..."
 Add-Printer -Name $printerName -DriverName $driverName -PortName $portName
-
-Write-Host ""
-Write-Host "DONE. '$printerName' is ready in Devices and Printers."
-Write-Host "Make sure PrintBridge.App.exe is running before you print to it."
+Log "SUCCESS. '$printerName' is ready. Run PrintBridge.App.exe before printing."
