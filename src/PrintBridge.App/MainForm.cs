@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -27,6 +28,10 @@ namespace PrintBridge.App
         private CheckBox _askCheck;
         private ComboBox _defaultFormatCombo;
         private ListView _formatsList;
+
+        // About / Updates tab
+        private Button _updateBtn;
+        private Label _updateStatus;
 
         public MainForm(IPrinterService printers, DiscoveryService discovery,
             SharingService sharing, LocalRawListener rawListener, AppConfig config, string configPath)
@@ -106,6 +111,7 @@ namespace PrintBridge.App
             tabs.TabPages.Add(myTab);
             tabs.TabPages.Add(netTab);
             tabs.TabPages.Add(BuildFormatsTab());
+            tabs.TabPages.Add(BuildAboutTab());
             Controls.Add(tabs);
 
             _tray = new NotifyIcon
@@ -392,6 +398,114 @@ namespace PrintBridge.App
             }
             _config.Save(_configPath);
             RefreshFormatsList();
+        }
+
+        // --- About / Updates tab ----------------------------------------------------
+
+        private static string VersionText(Version v) => $"{v.Major}.{v.Minor}.{v.Build}";
+
+        private TabPage BuildAboutTab()
+        {
+            var tab = new TabPage("About");
+            var current = new UpdateService().CurrentVersion;
+
+            var title = new Label
+            {
+                Text = $"PrintBridge\nVersion {VersionText(current)}",
+                Dock = DockStyle.Top,
+                Height = 56,
+                Padding = new Padding(10, 10, 0, 0)
+            };
+
+            _updateBtn = new Button { Text = "Check for updates", Dock = DockStyle.Top, Height = 40 };
+            _updateBtn.Click += OnCheckForUpdates;
+
+            _updateStatus = new Label
+            {
+                Text = "",
+                Dock = DockStyle.Top,
+                Height = 80,
+                Padding = new Padding(10, 8, 8, 0)
+            };
+
+            // Docking: add inner-most last so the status label sits under the button.
+            tab.Controls.Add(_updateStatus);
+            tab.Controls.Add(_updateBtn);
+            tab.Controls.Add(title);
+            return tab;
+        }
+
+        private async void OnCheckForUpdates(object sender, EventArgs e)
+        {
+            _updateBtn.Enabled = false;
+            _updateStatus.Text = "Checking GitHub for the latest release…";
+            try
+            {
+                var svc = new UpdateService();
+                var info = await svc.GetLatestAsync();
+
+                if (info?.Version == null)
+                {
+                    _updateStatus.Text = "No releases have been published yet.";
+                    return;
+                }
+
+                if (!svc.IsNewer(info))
+                {
+                    _updateStatus.Text = $"This is the latest version ({VersionText(svc.CurrentVersion)}).";
+                    return;
+                }
+
+                var notes = string.IsNullOrWhiteSpace(info.Notes) ? "" : "\n\n" + info.Notes.Trim();
+                var prompt =
+                    $"Version {VersionText(info.Version)} is available (you have {VersionText(svc.CurrentVersion)}).{notes}\n\n" +
+                    "Download and install it now? PrintBridge will close while the installer runs.";
+
+                if (MessageBox.Show(prompt, "PrintBridge update", MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question) != DialogResult.Yes)
+                {
+                    _updateStatus.Text = "Update postponed.";
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(info.DownloadUrl))
+                {
+                    _updateStatus.Text = "That release has no installer attached.";
+                    MessageBox.Show(
+                        "The latest release doesn't include a PrintBridge-Setup.exe asset, so it can't be " +
+                        "installed automatically. Attach the installer to the GitHub release and try again.",
+                        "PrintBridge");
+                    return;
+                }
+
+                _updateStatus.Text = "Downloading the installer…";
+                var installerPath = await svc.DownloadInstallerAsync(info);
+
+                _updateStatus.Text = "Launching the installer…";
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = installerPath,
+                    // Silent install, close+restart the app for us. UseShellExecute lets the
+                    // installer's admin manifest trigger the UAC prompt.
+                    Arguments = "/SILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /NORESTART",
+                    UseShellExecute = true
+                });
+
+                // Exit so the installer can overwrite our files.
+                _tray.Visible = false;
+                Application.Exit();
+            }
+            catch (Exception ex)
+            {
+                _updateStatus.Text = "Update check failed.";
+                MessageBox.Show(
+                    "Couldn't check for or download the update.\n\nDetails: " + ex.Message,
+                    "PrintBridge");
+            }
+            finally
+            {
+                if (!IsDisposed) _updateBtn.Enabled = true;
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)

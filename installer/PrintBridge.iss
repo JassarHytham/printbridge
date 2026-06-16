@@ -5,9 +5,14 @@
 ; No custom DLLs, no signing, no test-signing mode required.
 
 #define AppName "PrintBridge"
-#define AppVersion "1.0.0"
-#define Publisher "PrintBridge"
 #define AppExe "PrintBridge.App.exe"
+; Version is read from the built exe so there's a single source of truth (the
+; csproj <Version>). Falls back to 0.0.0 if the exe isn't built yet.
+#define AppVersion GetVersionNumbersString("..\src\PrintBridge.App\bin\Release\net48\PrintBridge.App.exe")
+#if AppVersion == ""
+  #define AppVersion "0.0.0"
+#endif
+#define Publisher "PrintBridge"
 
 [Setup]
 AppName={#AppName}

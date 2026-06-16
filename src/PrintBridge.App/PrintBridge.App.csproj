@@ -8,6 +8,10 @@
     <RootNamespace>PrintBridge.App</RootNamespace>
     <AssemblyName>PrintBridge.App</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Single source of truth for the app version. Bump this for each release;
+         the installer reads it from the built exe, and the in-app updater compares
+         it against the latest GitHub release tag. -->
+    <Version>1.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
