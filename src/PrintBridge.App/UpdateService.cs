@@ -43,8 +43,17 @@ namespace PrintBridge.App
         public async Task<UpdateInfo> GetLatestAsync()
         {
             string json;
-            using (var wc = NewClient())
-                json = await wc.DownloadStringTaskAsync(LatestReleaseUrl).ConfigureAwait(false);
+            try
+            {
+                using (var wc = NewClient())
+                    json = await wc.DownloadStringTaskAsync(LatestReleaseUrl).ConfigureAwait(false);
+            }
+            catch (WebException ex) when ((ex.Response as HttpWebResponse)?.StatusCode == HttpStatusCode.NotFound)
+            {
+                // GitHub returns 404 for /releases/latest when the repo has no published
+                // (non-draft, non-prerelease) releases yet. Not an error — just nothing to offer.
+                return null;
+            }
 
             var o = JObject.Parse(json);
             var tag = (string)o["tag_name"];
