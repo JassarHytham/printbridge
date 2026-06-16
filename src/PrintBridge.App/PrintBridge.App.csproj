@@ -11,7 +11,7 @@
     <!-- Single source of truth for the app version. Bump this for each release;
          the installer reads it from the built exe, and the in-app updater compares
          it against the latest GitHub release tag. -->
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

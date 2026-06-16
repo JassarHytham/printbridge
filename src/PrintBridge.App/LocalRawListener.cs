@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using PrintBridge.Protocol;
+using PrintBridge.Spooler;
 
 namespace PrintBridge.App
 {
@@ -127,15 +128,39 @@ namespace PrintBridge.App
                 return;
             }
 
+            double mediaWidth  = format?.WidthPoints ?? 0;
+            double mediaHeight = format?.HeightPoints ?? 0;
+            bool fitToPage     = format?.FitToPage ?? false;
+
+            // "Auto (match document)": pull the page size straight out of the PostScript so
+            // ERP/templated layouts print at their authored geometry. Fall back to the
+            // printer's default media when the document doesn't declare a size.
+            if (format != null && format.UseDocumentSize)
+            {
+                if (PostScriptPageSize.TryParse(postScript, out var w, out var h))
+                {
+                    mediaWidth  = w;
+                    mediaHeight = h;
+                    JobLogged?.Invoke($"Matched document size: {w:0.#} x {h:0.#} pt");
+                }
+                else
+                {
+                    mediaWidth  = 0;
+                    mediaHeight = 0;
+                    JobLogged?.Invoke("Document size not declared — using printer default media.");
+                }
+                fitToPage = false;   // render 1:1 to the document's own size, never scale
+            }
+
             var header = new JobHeader
             {
                 JobId          = Guid.NewGuid().ToString("N"),
                 TargetPrinter  = targetPrinter,
                 Copies         = copies,
                 PaperSize      = format?.Name ?? "Printer default",
-                MediaWidthPoints  = format?.WidthPoints ?? 0,
-                MediaHeightPoints = format?.HeightPoints ?? 0,
-                FitToPage      = format?.FitToPage ?? false,
+                MediaWidthPoints  = mediaWidth,
+                MediaHeightPoints = mediaHeight,
+                FitToPage      = fitToPage,
                 RequestingUser = Environment.UserName,
                 RequestingPc   = Environment.MachineName,
                 Pin            = cfg.Pin

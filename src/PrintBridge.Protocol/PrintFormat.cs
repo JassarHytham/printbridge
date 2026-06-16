@@ -23,6 +23,13 @@ namespace PrintBridge.Protocol
         [JsonProperty("fitToPage")]
         public bool FitToPage { get; set; }
 
+        /// <summary>
+        /// Read the media size from the document itself (its PostScript page setup)
+        /// rather than forcing a fixed size. Honours ERP/templated layouts as authored.
+        /// </summary>
+        [JsonProperty("useDocumentSize")]
+        public bool UseDocumentSize { get; set; }
+
         /// <summary>True when this format pins a specific media size.</summary>
         [JsonIgnore]
         public bool ForcesMedia => WidthPoints > 0 && HeightPoints > 0;
@@ -35,6 +42,7 @@ namespace PrintBridge.Protocol
         /// <summary>The formats every install ships with. Users can add more in the app.</summary>
         public static List<PrintFormat> BuiltIns() => new List<PrintFormat>
         {
+            new PrintFormat { Name = "Auto (match document)", UseDocumentSize = true },     // read size from the doc
             new PrintFormat { Name = "Printer default" },                                   // 0,0 -> no forcing
             new PrintFormat { Name = "A4",           WidthPoints = Mm(210), HeightPoints = Mm(297) },
             new PrintFormat { Name = "Letter",       WidthPoints = 612,     HeightPoints = 792 },
