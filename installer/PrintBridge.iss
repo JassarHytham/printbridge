@@ -25,6 +25,15 @@ OutputBaseFilename=PrintBridge-Setup
 Compression=lzma2
 SolidCompression=yes
 PrivilegesRequired=admin
+; --- No reboot on install/update -------------------------------------------------
+; PrintBridge auto-starts and sits in the tray, so on re-install its exe/DLLs are
+; locked. Close the running instance automatically (it holds this mutex) via Restart
+; Manager so files aren't locked, don't relaunch it (we do that ourselves below), and
+; never let the post-install printer/driver step trigger a restart prompt.
+AppMutex=PrintBridge.SingleInstance
+CloseApplications=force
+RestartApplications=no
+RestartIfNeededByRun=no
 ; ARM64 Windows 11 runs x64 user-mode code via the Prism emulation layer.
 ; Ghostscript x64 works fine there. Leave ArchitecturesInstallIn64BitMode
 ; unset so the installer runs on both x64 and ARM64.
